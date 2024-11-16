@@ -25,7 +25,7 @@ npm install --global super-dee-duper
 ```bash
 # Clone the repository
 git clone https://github.com/johnhenry/super-dee-duper
-cd dupe-scanner
+cd super-dee-duper
 # Install dependencies
 npm install
 # Link
@@ -129,7 +129,7 @@ super-dee-duper generate-test ./test-dir -c 10 -d 2
 ### Project Structure
 
 ```
-dupe-scanner/
+super-dee-duper/
 ├── cli.mjs              # Command line interface
 ├── scanner.mjs          # Core duplicate scanning logic
 ├── web-interface.mjs    # Web interface server

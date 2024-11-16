@@ -6,7 +6,7 @@ import { displayConsoleResults } from "./console-output.mjs";
 import { generateTestFiles } from "./generate-test-files.mjs";
 
 program
-  .name("dupe-scan")
+  .name("super-dee-duper")
   .description("Scan directory for duplicate files")
   .version("1.0.0");
 
