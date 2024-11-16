@@ -1,0 +1,19 @@
+{
+  "name": "dupe-scanner",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "dupe-scan": "./cli.js"
+  },
+  "scripts": {
+    "start": "node cli.js",
+    "genfiles":"node generate-test-files.js"
+  },
+  "dependencies": {
+    "commander": "^11.1.0",
+    "express": "^4.18.2",
+    "open": "^10.0.3",
+    "cli-table3": "^0.6.3"
+  }
+}

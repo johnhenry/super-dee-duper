@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Duplicate File Manager</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        font-family: system-ui;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .group {
+        background: #f5f5f5;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+      }
+      .group-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+      .group-header h3 {
+        margin: 0;
+        flex-grow: 1;
+      }
+      .file {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        margin: 5px 0;
+        background: white;
+        border-radius: 4px;
+      }
+      .file-select {
+        margin-right: 15px;
+      }
+      .file-info {
+        flex-grow: 1;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      button {
+        padding: 5px 10px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      button:hover {
+        opacity: 0.9;
+      }
+      .delete {
+        background: #ff4444;
+        color: white;
+        border: none;
+      }
+      .download {
+        background: #4caf50;
+        color: white;
+        border: none;
+      }
+      .rename-btn {
+        background: #2196f3;
+        color: white;
+        border: none;
+      }
+      input[type="text"] {
+        padding: 5px;
+        margin-right: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .top-actions {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+      }
+      .shutdown-btn {
+        background: #673ab7;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+      }
+      .delete-selected {
+        background: #ff4444;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+      }
+      .success-message {
+        color: #4caf50;
+        margin-left: 10px;
+        opacity: 1;
+        transition: opacity 0.5s;
+      }
+      .fade-out {
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Duplicate File Manager</h1>
+    <div class="top-actions">
+      <button
+        class="delete-selected"
+        onclick="deleteSelected()"
+        disabled
+        id="deleteSelectedBtn"
+      >
+        Delete Selected
+      </button>
+      <button class="shutdown-btn" onclick="shutdown()">Shutdown Server</button>
+    </div>
+    <div id="groups"></div>
+
+    <script>
+      async function loadDuplicates() {
+        const response = await fetch("/api/duplicates");
+        const groups = await response.json();
+        const container = document.getElementById("groups");
+
+        container.innerHTML = groups
+          .map((group, groupIndex) => {
+            const hash = group[0].hash;
+            const size = group[0].size;
+            return `
+            <div class="group" data-group-index="${groupIndex}">
+              <div class="group-header">
+                <h3>Group ${groupIndex + 1} (Hash: ${hash.slice(
+              0,
+              8
+            )}...) - Size: ${size} bytes</h3>
+                <label>
+                  <input type="checkbox" 
+                         onchange="toggleGroupSelection(${groupIndex}, this.checked)" 
+                         class="group-checkbox">
+                  Select All
+                </label>
+              </div>
+              ${group
+                .map(
+                  (file, fileIndex) => `
+                <div class="file" data-file-index="${fileIndex}">
+                  <div class="file-select">
+                    <input type="checkbox" 
+                           class="file-checkbox" 
+                           data-path="${file.path}"
+                           onchange="updateDeleteButton()">
+                  </div>
+                  <div class="file-info">
+                    <div>${file.path}</div>
+                  </div>
+                  <div class="actions">
+                    <div class="rename-container">
+                      <input type="text" 
+                             placeholder="New name" 
+                             onkeyup="if(event.key==='Enter') renameFile(${groupIndex}, ${fileIndex}, this)">
+                      <button class="rename-btn" 
+                              onclick="renameFile(${groupIndex}, ${fileIndex}, this.previousElementSibling)">
+                        Rename
+                      </button>
+                      <span class="success-message" style="opacity: 0;">Renamed!</span>
+                    </div>
+                    <button class="download" onclick="downloadFile('${file.path}')">Download</button>
+                  </div>
+                </div>
+              `
+                )
+                .join("")}
+            </div>
+          `;
+          })
+          .join("");
+      }
+
+      function updateDeleteButton() {
+        const selectedCount = document.querySelectorAll(
+          ".file-checkbox:checked"
+        ).length;
+        const deleteBtn = document.getElementById("deleteSelectedBtn");
+        deleteBtn.disabled = selectedCount === 0;
+        deleteBtn.textContent = `Delete Selected (${selectedCount})`;
+      }
+
+      function toggleGroupSelection(groupIndex, checked) {
+        const group = document.querySelector(
+          `.group[data-group-index="${groupIndex}"]`
+        );
+        group.querySelectorAll(".file-checkbox").forEach((checkbox) => {
+          checkbox.checked = checked;
+        });
+        updateDeleteButton();
+      }
+
+      async function deleteSelected() {
+        const selectedPaths = Array.from(
+          document.querySelectorAll(".file-checkbox:checked")
+        ).map((checkbox) => checkbox.dataset.path);
+
+        if (
+          !confirm(
+            `Are you sure you want to delete ${selectedPaths.length} file(s)?`
+          )
+        )
+          return;
+
+        for (const path of selectedPaths) {
+          await fetch("/api/delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filePath: path }),
+          });
+        }
+
+        loadDuplicates();
+      }
+
+      async function renameFile(groupIndex, fileIndex, input) {
+        if (!input.value) return;
+
+        const group = document.querySelector(
+          `.group[data-group-index="${groupIndex}"]`
+        );
+        const file = group.querySelector(
+          `.file[data-file-index="${fileIndex}"]`
+        );
+        const oldPath = file.querySelector(".file-checkbox").dataset.path;
+
+        try {
+          const response = await fetch("/api/rename", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ oldPath, newName: input.value }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            // Update the path in the UI
+            file.querySelector(".file-info").firstElementChild.textContent =
+              result.newPath;
+            file.querySelector(".file-checkbox").dataset.path = result.newPath;
+
+            // Show success message
+            const successMsg = file.querySelector(".success-message");
+            successMsg.style.opacity = "1";
+            setTimeout(() => {
+              successMsg.style.opacity = "0";
+            }, 2000);
+
+            // Clear input
+            input.value = "";
+          }
+        } catch (error) {
+          alert("Failed to rename file: " + error.message);
+        }
+      }
+
+      function downloadFile(path) {
+        const encodedPath = encodeURIComponent(path);
+        window.location.href = `/api/download/${encodedPath}`;
+      }
+
+      async function shutdown() {
+        if (!confirm("Are you sure you want to shutdown the server?")) return;
+        try {
+          await fetch("/api/shutdown", { method: "POST" });
+          document.body.innerHTML =
+            "<h1>Server has been shut down</h1><p>You can close this window now.</p>";
+        } catch (error) {
+          // If we get here, the server is probably already shut down
+          document.body.innerHTML =
+            "<h1>Server has been shut down</h1><p>You can close this window now.</p>";
+        }
+      }
+
+      loadDuplicates();
+    </script>
+  </body>
+</html>
