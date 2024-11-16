@@ -2,6 +2,8 @@ import crypto from "crypto";
 import fs from "fs/promises";
 import { createReadStream } from "fs";
 import path from "path";
+import { minimatch } from "minimatch";
+import { ScanDatabase } from "./database.mjs";
 
 /**
  * @typedef {Object} FileSize
@@ -78,33 +80,69 @@ function formatFileSize(bytes) {
  * Scan directory for files
  * @param {string} dir - Directory path to scan
  * @param {boolean} recursive - Whether to scan subdirectories
+ * @param {string[]} excludePatterns - Glob patterns to exclude
+ * @param {function} progressCallback - Callback for progress updates
+ * @param {ScanDatabase} db - Database instance
+ * @param {number} scanId - Current scan ID
  * @returns {Promise<FileInfo[]>} Array of file information objects
  */
-async function scanDirectory(dir, recursive) {
+async function scanDirectory(
+  dir,
+  recursive,
+  excludePatterns = [],
+  progressCallback = () => {},
+  db,
+  scanId
+) {
   try {
     const files = await fs.readdir(dir, { withFileTypes: true });
     let allFiles = [];
+    let filesScanned = 0;
 
     for (const file of files) {
       const fullPath = path.join(dir, file.name);
+      const relativePath = path.relative(process.cwd(), fullPath);
+
+      // Check if path matches any exclude pattern
+      if (excludePatterns.some((pattern) => minimatch(relativePath, pattern))) {
+        continue;
+      }
 
       try {
         if (file.isDirectory() && recursive) {
-          allFiles = allFiles.concat(await scanDirectory(fullPath, recursive));
+          const subDirFiles = await scanDirectory(
+            fullPath,
+            recursive,
+            excludePatterns,
+            progressCallback,
+            db,
+            scanId
+          );
+          allFiles = allFiles.concat(subDirFiles);
         } else if (file.isFile()) {
           const stats = await fs.stat(fullPath);
           const size = formatFileSize(stats.size);
+          const quickHash = await calculateQuickHash(fullPath);
 
-          allFiles.push({
+          const fileInfo = {
             path: fullPath,
             name: file.name,
             size: size.raw,
             formattedSize: size.formatted,
             created: stats.birthtime,
             modified: stats.mtime,
-            quickHash: await calculateQuickHash(fullPath),
-            hash: null, // Full hash will be calculated only when needed
-          });
+            quickHash,
+            hash: null,
+          };
+
+          allFiles.push(fileInfo);
+          filesScanned++;
+
+          if (db) {
+            db.addFile(scanId, fileInfo);
+          }
+
+          progressCallback(filesScanned);
         }
       } catch (error) {
         console.error(`Error processing ${fullPath}:`, error.message);
@@ -120,12 +158,39 @@ async function scanDirectory(dir, recursive) {
 /**
  * Find duplicate files in a directory
  * @param {string} dir - Directory path to scan
- * @param {boolean} recursive - Whether to scan subdirectories
+ * @param {Object} options - Scan options
+ * @param {boolean} options.recursive - Whether to scan subdirectories
+ * @param {string[]} options.exclude - Glob patterns to exclude
+ * @param {string} options.indexPath - Path to store the index file
+ * @param {boolean} options.incomplete - Whether to resume an incomplete scan
+ * @param {function} options.onProgress - Progress callback
  * @returns {Promise<FileInfo[][]>} Array of file groups, where each group contains duplicate files
  */
-export async function findDuplicates(dir, recursive) {
+export async function findDuplicates(dir, options = {}) {
+  const {
+    recursive = false,
+    exclude = [],
+    indexPath,
+    incomplete = false,
+    onProgress = () => {},
+  } = options;
+
+  const dbPath = indexPath || ScanDatabase.generateIndexPath(process.cwd());
+  const db = new ScanDatabase(dbPath);
+  const scanId = db.startScan(path.resolve(dir));
+
   try {
-    const files = await scanDirectory(dir, recursive);
+    const files = await scanDirectory(
+      dir,
+      recursive,
+      exclude,
+      (filesScanned) => {
+        onProgress({ filesScanned, groupsFound: 0, phase: "scanning" });
+        db.updateScanProgress(scanId, filesScanned, 0);
+      },
+      db,
+      scanId
+    );
 
     // Group files by size first for quick filtering
     const sizeGroups = new Map();
@@ -142,6 +207,7 @@ export async function findDuplicates(dir, recursive) {
     );
 
     const duplicates = new Map();
+    let groupsFound = 0;
 
     // For each size group, compare quick hashes
     for (const group of potentialDuplicates) {
@@ -161,23 +227,43 @@ export async function findDuplicates(dir, recursive) {
           // Calculate full hashes only for potential duplicates
           for (const file of quickHashGroup) {
             file.hash = await calculateHash(file.path);
+            if (db) {
+              const groupId = file.hash;
+              const fileId = db.db
+                .prepare("SELECT id FROM files WHERE path = ?")
+                .get(file.path)?.id;
+              if (fileId) {
+                db.updateFileHash(fileId, file.hash, groupId);
+              }
+            }
           }
 
           // Group by full hash
           quickHashGroup.forEach((file) => {
             if (!duplicates.has(file.hash)) {
               duplicates.set(file.hash, []);
+              groupsFound++;
             }
             duplicates.get(file.hash).push(file);
           });
+
+          onProgress({
+            filesScanned: files.length,
+            groupsFound,
+            phase: "hashing",
+          });
+          db.updateScanProgress(scanId, files.length, groupsFound);
         }
       }
     }
 
     // Filter out unique files and sort groups by size
-    return Array.from(duplicates.values())
+    const result = Array.from(duplicates.values())
       .filter((group) => group.length > 1)
       .sort((a, b) => b[0].size - a[0].size);
+
+    db.completeScan(scanId);
+    return { result, dbPath, scanId };
   } catch (error) {
     throw new Error(`Failed to find duplicates: ${error.message}`);
   }

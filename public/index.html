@@ -59,7 +59,32 @@
         align-items: center;
         margin-bottom: 20px;
       }
+      .header-content.collapsed .stats,
+      .header-content.collapsed .filters,
+      .header-content.collapsed .top-actions,
+      .header-content.collapsed .scan-info {
+        display: none;
+      }
+      .scan-info {
+        display: none;
+      }
 
+      .scan-info.show {
+        display: block;
+      }
+
+      .header-content.collapsed .scan-info.show {
+        display: none;
+      }
+
+      .collapse-header-btn {
+        background: none;
+        border: 1px solid var(--border-color);
+        padding: 8px;
+        cursor: pointer;
+        color: var(--text-primary);
+        margin-right: 10px;
+      }
       .stats {
         background: var(--bg-secondary);
         padding: 10px;
@@ -105,11 +130,11 @@
         cursor: pointer;
         color: var(--text-primary);
       }
-
       .main-content {
         max-width: 1200px;
         margin: 0 auto;
         padding: 20px;
+        padding-bottom: 70px;
       }
 
       .group {
@@ -187,7 +212,6 @@
         gap: 15px;
         flex-wrap: wrap;
       }
-
       .actions {
         display: flex;
         gap: 5px;
@@ -221,7 +245,6 @@
         opacity: 0.5;
         cursor: not-allowed;
       }
-
       .delete {
         background: var(--delete-color);
       }
@@ -270,8 +293,8 @@
       .filter-input {
         flex: 1;
         min-width: 200px;
+        height: 32px;
       }
-
       .filter-group {
         display: flex;
         flex-direction: column;
@@ -314,7 +337,6 @@
         padding: 20px;
         overflow: auto;
       }
-
       .preview-image {
         max-width: 100%;
         height: auto;
@@ -357,6 +379,87 @@
         margin-top: 10px;
       }
 
+      .media-preview {
+        max-width: 100%;
+        max-height: 70vh;
+        margin: 0 auto;
+        display: block;
+      }
+      .preview-audio {
+        width: 100%;
+        margin: 20px 0;
+      }
+
+      .preview-video {
+        max-width: 100%;
+        max-height: 70vh;
+        margin: 0 auto;
+        display: block;
+      }
+
+      .preview-iframe {
+        width: 100%;
+        height: 70vh;
+        border: none;
+      }
+
+      .scan-info {
+        background: var(--bg-secondary);
+        padding: 15px;
+        margin-bottom: 20px;
+        border: 1px solid var(--border-color);
+      }
+
+      .scan-info-item {
+        margin: 5px 0;
+        color: var(--text-secondary);
+      }
+
+      .scan-info-value {
+        color: var(--text-primary);
+        font-weight: 500;
+      }
+
+      .filter-group select {
+        min-width: 150px;
+      }
+
+      .auto-select-group {
+        margin-left: auto;
+        display: flex;
+        gap: 10px;
+        align-items: flex-end;
+      }
+
+      .delete-options {
+        display: none;
+      }
+
+      .file-actions {
+        display: flex;
+        gap: 5px;
+        margin-left: auto;
+      }
+
+      .individual-delete {
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+
+      .footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--bg-primary);
+        border-top: 1px solid var(--border-color);
+        padding: 15px 20px;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        z-index: 100;
+      }
+
       @media (max-width: 768px) {
         .actions {
           flex-wrap: wrap;
@@ -386,6 +489,10 @@
         }
       }
     </style>
+    <script type="module">
+      import { pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2";
+      window.pipeline = pipeline;
+    </script>
   </head>
   <body>
     <div class="header-container">
@@ -394,6 +501,13 @@
           <h1>Super Dee Duper : Duplicate File Manager</h1>
           <div class="controls">
             <button
+              class="collapse-header-btn"
+              onclick="toggleHeader()"
+              aria-label="Toggle header"
+            >
+              ▼
+            </button>
+            <button
               class="theme-toggle"
               onclick="toggleTheme()"
               aria-label="Toggle dark mode"
@@ -401,6 +515,9 @@
               🌓
             </button>
           </div>
+        </div>
+        <div id="scanInfo" class="scan-info">
+          <!-- Populated by JavaScript -->
         </div>
 
         <div class="stats" id="stats">
@@ -440,10 +557,12 @@
               onchange="applyFilters()"
               aria-label="Filter by file size"
             >
-              <option value="">All Sizes</option>
-              <option value="small">Small (<1MB)</option>
+              <option value="all">All Sizes</option>
+              <option value="small">Small (0-1MB)</option>
               <option value="medium">Medium (1-10MB)</option>
-              <option value="large">Large (>10MB)</option>
+              <option value="large">Large (10-100MB)</option>
+              <option value="xlarge">Extra Large (100MB-1GB)</option>
+              <option value="xxlarge">XXL (1GB+)</option>
             </select>
           </div>
           <div class="filter-group">
@@ -455,33 +574,59 @@
             >
               <option value="">All Types</option>
               <option value="image">Images</option>
+              <option value="audio">Audio</option>
+              <option value="video">Video</option>
               <option value="document">Documents</option>
-              <option value="video">Videos</option>
               <option value="other">Other</option>
             </select>
+          </div>
+          <div class="filter-group auto-select-group">
+            <div>
+              <label for="autoSelect" class="filter-label">Auto-select</label>
+              <select
+                id="autoSelect"
+                onchange="applyAutoSelect()"
+                aria-label="Auto-select files"
+              >
+                <option value="none">None</option>
+                <option value="allButFirst">All but first</option>
+                <option value="allButLast">All but last</option>
+                <option value="longestName">Longest name</option>
+                <option value="shortestName">Shortest name</option>
+                <option value="deepestPath">Deepest path</option>
+                <option value="shallowestPath">Shallowest path</option>
+                <option value="smart">Smart (AI-powered)</option>
+              </select>
+            </div>
+            <button
+              class="delete-selected delete"
+              onclick="deleteSelected()"
+              disabled
+              id="deleteSelectedBtn"
+            >
+              Delete Selected
+            </button>
           </div>
         </div>
 
         <div class="top-actions">
           <button onclick="toggleAllGroups()">Toggle All Groups</button>
           <button onclick="showBatchRename()">Batch Rename</button>
-          <button
-            class="delete-selected"
-            onclick="deleteSelected()"
-            disabled
-            id="deleteSelectedBtn"
-          >
-            Delete Selected
-          </button>
-          <button class="shutdown-btn" onclick="shutdown()">
-            Shutdown Server
-          </button>
         </div>
       </div>
     </div>
 
     <div class="main-content">
       <div id="groups"></div>
+    </div>
+
+    <div class="footer">
+      <button class="shutdown-btn" onclick="shutdown(false)">
+        Shutdown Server
+      </button>
+      <button class="shutdown-btn delete" onclick="shutdown(true)">
+        Shutdown & Delete Index
+      </button>
     </div>
 
     <div
@@ -499,7 +644,6 @@
       </button>
       <div class="preview-content" id="previewContent"></div>
     </div>
-
     <script>
       // Theme management
       function toggleTheme() {
@@ -523,10 +667,12 @@
         const imageExts = ["jpg", "jpeg", "png", "gif", "bmp", "webp"];
         const documentExts = ["pdf", "doc", "docx", "txt", "md", "rtf"];
         const videoExts = ["mp4", "avi", "mov", "wmv", "flv", "mkv"];
+        const audioExts = ["mp3", "wav", "ogg", "m4a", "flac"];
 
         if (imageExts.includes(ext)) return "🖼️";
         if (documentExts.includes(ext)) return "📄";
         if (videoExts.includes(ext)) return "🎥";
+        if (audioExts.includes(ext)) return "🎵";
         return "📁";
       }
 
@@ -563,7 +709,6 @@
 
         return `${size.toFixed(1)}${units[unitIndex]}`;
       }
-
       function toggleAllGroups() {
         allGroupsExpanded = !allGroupsExpanded;
         document.querySelectorAll(".group").forEach((group) => {
@@ -582,7 +727,7 @@
         group.classList.toggle("collapsed");
       }
 
-      function showBatchRename() {
+      async function showBatchRename() {
         const selectedFiles = Array.from(
           document.querySelectorAll(".file-checkbox:checked")
         ).map((checkbox) => checkbox.dataset.path);
@@ -597,181 +742,30 @@
         );
         if (!pattern) return;
 
-        batchRename(selectedFiles, pattern);
-      }
+        try {
+          for (let i = 0; i < selectedFiles.length; i++) {
+            const oldPath = selectedFiles[i];
+            const oldName = oldPath.split("/").pop();
+            const ext = oldName.includes(".") ? oldName.split(".").pop() : "";
+            const baseName = oldName.includes(".")
+              ? oldName.slice(0, -ext.length - 1)
+              : oldName;
 
-      async function batchRename(files, pattern) {
-        for (let i = 0; i < files.length; i++) {
-          const oldPath = files[i];
-          const oldName = oldPath.split("/").pop();
-          const ext = oldName.includes(".") ? oldName.split(".").pop() : "";
-          const baseName = oldName.includes(".")
-            ? oldName.slice(0, -ext.length - 1)
-            : oldName;
+            const newName = pattern
+              .replace("{n}", baseName)
+              .replace("{i}", (i + 1).toString().padStart(2, "0"))
+              .replace("{ext}", ext ? `.${ext}` : "");
 
-          const newName = pattern
-            .replace("{n}", baseName)
-            .replace("{i}", (i + 1).toString().padStart(2, "0"))
-            .replace("{ext}", ext ? `.${ext}` : "");
-
-          try {
             await fetch("/api/rename", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ oldPath, newName }),
             });
-          } catch (error) {
-            console.error(`Failed to rename ${oldPath}:`, error);
           }
+          loadDuplicates();
+        } catch (error) {
+          alert("Failed to rename files: " + error.message);
         }
-
-        loadDuplicates();
-      }
-
-      function getFileType(path) {
-        const ext = path.toLowerCase().split(".").pop();
-        const imageExts = ["jpg", "jpeg", "png", "gif", "bmp", "webp"];
-        const documentExts = ["pdf", "doc", "docx", "txt", "md", "rtf"];
-        const videoExts = ["mp4", "avi", "mov", "wmv", "flv", "mkv"];
-
-        if (imageExts.includes(ext)) return "image";
-        if (documentExts.includes(ext)) return "document";
-        if (videoExts.includes(ext)) return "video";
-        return "other";
-      }
-
-      function formatDate(date) {
-        return new Date(date).toLocaleString();
-      }
-
-      async function loadDuplicates() {
-        const response = await fetch("/api/duplicates");
-        duplicateGroups = await response.json();
-        renderGroups();
-        updateStats();
-      }
-
-      function applyFilters() {
-        renderGroups();
-      }
-
-      function renderGroups() {
-        const pathFilter = document
-          .getElementById("pathFilter")
-          .value.toLowerCase();
-        const sizeFilter = document.getElementById("sizeFilter").value;
-        const typeFilter = document.getElementById("typeFilter").value;
-
-        const filteredGroups = duplicateGroups.filter((group) => {
-          // Apply size filter
-          const size = group[0].size;
-          if (sizeFilter === "small" && size >= 1024 * 1024) return false;
-          if (
-            sizeFilter === "medium" &&
-            (size < 1024 * 1024 || size > 10 * 1024 * 1024)
-          )
-            return false;
-          if (sizeFilter === "large" && size <= 10 * 1024 * 1024) return false;
-
-          // Apply path and type filters
-          return group.some((file) => {
-            const matchesPath = file.path.toLowerCase().includes(pathFilter);
-            const matchesType =
-              !typeFilter || getFileType(file.path) === typeFilter;
-            return matchesPath && matchesType;
-          });
-        });
-
-        const container = document.getElementById("groups");
-        container.innerHTML = filteredGroups
-          .map((group, groupIndex) => {
-            const hash = group[0].hash;
-            return `
-          <div class="group" data-group-index="${groupIndex}">
-            <div class="group-header" onclick="toggleGroup(${groupIndex})">
-              <span class="collapse-indicator">▼</span>
-              <h3>Group ${groupIndex + 1} - ${group[0].formattedSize} - ${
-              hash ? hash.slice(0, 8) : "calculating..."
-            }</h3>
-              <label>
-                <input type="checkbox" 
-                       onchange="toggleGroupSelection(${groupIndex}, this.checked); event.stopPropagation();" 
-                       class="group-checkbox"
-                       aria-label="Select all files in group ${groupIndex + 1}">
-                Select All
-              </label>
-            </div>
-            <div class="group-content">
-              ${group
-                .map(
-                  (file, fileIndex) => `
-                <div class="file" data-file-index="${fileIndex}">
-                  <div class="file-select">
-                    <input type="checkbox" 
-                           class="file-checkbox" 
-                           data-path="${file.path}"
-                           onchange="updateDeleteButton()"
-                           aria-label="Select ${file.path}">
-                  </div>
-                  <div class="file-info">
-                    <div class="file-icon">${getFileIcon(file.path)}</div>
-                    <div class="file-details">
-                      <div class="file-path">${file.path}</div>
-                      <div class="file-meta">
-                        <span>Size: ${file.formattedSize}</span>
-                        <span>Modified: ${formatDate(file.modified)}</span>
-                        <span>Created: ${formatDate(file.created)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="actions">
-                    <div class="rename-container">
-                      <input type="text" 
-                             placeholder="New name" 
-                             onkeyup="if(event.key==='Enter') renameFile(${groupIndex}, ${fileIndex}, this)"
-                             aria-label="New name for ${file.path}">
-                      <button class="rename-btn" 
-                              onclick="renameFile(${groupIndex}, ${fileIndex}, this.previousElementSibling)">
-                        Rename
-                      </button>
-                    </div>
-                    <button class="preview-btn" onclick="previewFile('${
-                      file.path
-                    }')" aria-label="Preview ${file.path}">Preview</button>
-                    <button class="download" onclick="downloadFile('${
-                      file.path
-                    }')" aria-label="Download ${file.path}">Download</button>
-                  </div>
-                </div>
-              `
-                )
-                .join("")}
-            </div>
-          </div>
-        `;
-          })
-          .join("");
-
-        updateDeleteButton();
-      }
-
-      function updateDeleteButton() {
-        const selectedCount = document.querySelectorAll(
-          ".file-checkbox:checked"
-        ).length;
-        const deleteBtn = document.getElementById("deleteSelectedBtn");
-        deleteBtn.disabled = selectedCount === 0;
-        deleteBtn.textContent = `Delete Selected (${selectedCount})`;
-      }
-
-      function toggleGroupSelection(groupIndex, checked) {
-        const group = document.querySelector(
-          `.group[data-group-index="${groupIndex}"]`
-        );
-        group.querySelectorAll(".file-checkbox").forEach((checkbox) => {
-          checkbox.checked = checked;
-        });
-        updateDeleteButton();
       }
 
       async function deleteSelected() {
@@ -786,15 +780,34 @@
         )
           return;
 
-        for (const path of selectedPaths) {
+        try {
+          for (const path of selectedPaths) {
+            await fetch("/api/delete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ filePath: path }),
+            });
+          }
+          loadDuplicates();
+        } catch (error) {
+          alert("Failed to delete files: " + error.message);
+        }
+      }
+      async function deleteFile(path) {
+        if (!confirm(`Are you sure you want to delete ${path}?`)) {
+          return;
+        }
+
+        try {
           await fetch("/api/delete", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ filePath: path }),
           });
+          loadDuplicates();
+        } catch (error) {
+          alert("Failed to delete file: " + error.message);
         }
-
-        loadDuplicates();
       }
 
       async function renameFile(groupIndex, fileIndex, input) {
@@ -831,26 +844,80 @@
       async function previewFile(path) {
         const modal = document.getElementById("previewModal");
         const content = document.getElementById("previewContent");
-        const fileType = getFileType(path);
+        const mimeType = getMimeType(path);
+        const encodedPath = encodeURIComponent(path);
+        const previewUrl = `/api/download/${encodedPath}`;
 
         modal.style.display = "block";
         content.innerHTML = "Loading preview...";
 
         try {
-          if (fileType === "image") {
-            content.innerHTML = `<img src="/api/download/${encodeURIComponent(
-              path
-            )}" class="preview-image" alt="Preview of ${path}">`;
-          } else {
-            const response = await fetch(
-              `/api/download/${encodeURIComponent(path)}`
-            );
+          if (mimeType.startsWith("image/")) {
+            content.innerHTML = `<img src="${previewUrl}" class="media-preview" alt="Preview of ${path}">`;
+          } else if (mimeType.startsWith("video/")) {
+            content.innerHTML = `<video src="${previewUrl}" class="preview-video" controls>
+              Your browser does not support video playback.
+            </video>`;
+          } else if (mimeType.startsWith("audio/")) {
+            content.innerHTML = `<audio src="${previewUrl}" class="preview-audio" controls>
+              Your browser does not support audio playback.
+            </audio>`;
+          } else if (mimeType === "application/pdf") {
+            content.innerHTML = `<iframe src="${previewUrl}" class="preview-iframe"></iframe>`;
+          } else if (mimeType.startsWith("text/")) {
+            const response = await fetch(previewUrl);
             const text = await response.text();
-            content.innerHTML = `<pre class="preview-text">${text}</pre>`;
+            content.innerHTML = `<pre class="preview-text">${escapeHtml(
+              text
+            )}</pre>`;
+          } else {
+            content.innerHTML = `<div class="preview-text">
+              Preview not available for this file type (${mimeType}).<br>
+              <button onclick="downloadFile('${path}')">Download Instead</button>
+            </div>`;
           }
         } catch (error) {
-          content.innerHTML = "Failed to load preview";
+          content.innerHTML = `<div class="preview-text">Failed to load preview: ${error.message}</div>`;
         }
+      }
+      function getMimeType(path) {
+        const ext = path.toLowerCase().split(".").pop();
+        const mimeTypes = {
+          // Images
+          jpg: "image/jpeg",
+          jpeg: "image/jpeg",
+          png: "image/png",
+          gif: "image/gif",
+          webp: "image/webp",
+          // Audio
+          mp3: "audio/mpeg",
+          wav: "audio/wav",
+          ogg: "audio/ogg",
+          mid: "audio/midi",
+          midi: "audio/midi",
+          // Video
+          mp4: "video/mp4",
+          webm: "video/webm",
+          // Documents
+          pdf: "application/pdf",
+          txt: "text/plain",
+          json: "application/json",
+          html: "text/html",
+          htm: "text/html",
+          css: "text/css",
+          js: "text/javascript",
+          md: "text/markdown",
+        };
+        return mimeTypes[ext] || "application/octet-stream";
+      }
+
+      function escapeHtml(unsafe) {
+        return unsafe
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
       }
 
       function closePreview() {
@@ -862,10 +929,23 @@
         window.location.href = `/api/download/${encodedPath}`;
       }
 
-      async function shutdown() {
-        if (!confirm("Are you sure you want to shutdown the server?")) return;
+      async function shutdown(deleteIndex = false) {
+        if (
+          !confirm(
+            `Are you sure you want to shutdown the server${
+              deleteIndex ? " and delete the index file" : ""
+            }?`
+          )
+        ) {
+          return;
+        }
+
         try {
-          await fetch("/api/shutdown", { method: "POST" });
+          await fetch("/api/shutdown", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ deleteIndex }),
+          });
           document.body.innerHTML =
             "<h1>Server has been shut down</h1><p>You can close this window now.</p>";
         } catch (error) {
@@ -873,9 +953,432 @@
             "<h1>Server has been shut down</h1><p>You can close this window now.</p>";
         }
       }
+      function applyFilters() {
+        renderGroups();
+      }
+
+      function getFileSize(size) {
+        const mb = size / (1024 * 1024);
+        if (mb >= 1024) return "xxlarge"; // 1GB+
+        if (mb >= 100) return "xlarge"; // 100MB-1GB
+        if (mb >= 10) return "large"; // 10-100MB
+        if (mb >= 1) return "medium"; // 1-10MB
+        return "small"; // 0-1MB
+      }
+
+      function formatDate(date) {
+        return new Date(date).toLocaleString();
+      }
+
+      function getFileType(path) {
+        const ext = path.toLowerCase().split(".").pop();
+        const imageExts = ["jpg", "jpeg", "png", "gif", "bmp", "webp"];
+        const documentExts = ["pdf", "doc", "docx", "txt", "md", "rtf"];
+        const videoExts = ["mp4", "avi", "mov", "wmv", "flv", "mkv"];
+        const audioExts = ["mp3", "wav", "ogg", "m4a", "flac"];
+
+        if (imageExts.includes(ext)) return "image";
+        if (documentExts.includes(ext)) return "document";
+        if (videoExts.includes(ext)) return "video";
+        if (audioExts.includes(ext)) return "audio";
+        return "other";
+      }
+
+      function renderGroups() {
+        const pathFilter = document
+          .getElementById("pathFilter")
+          .value.toLowerCase();
+        const sizeFilter = document.getElementById("sizeFilter").value;
+        const typeFilter = document.getElementById("typeFilter").value;
+
+        const filteredGroups = duplicateGroups.filter((group) => {
+          // Apply size filter
+          if (sizeFilter !== "all") {
+            const sizeCategory = getFileSize(group[0].size);
+            if (sizeFilter !== sizeCategory) return false;
+          }
+
+          // Apply path and type filters
+          return group.some((file) => {
+            const matchesPath = file.path.toLowerCase().includes(pathFilter);
+            const matchesType =
+              !typeFilter || getFileType(file.path) === typeFilter;
+            return matchesPath && matchesType;
+          });
+        });
+
+        const container = document.getElementById("groups");
+        container.innerHTML = filteredGroups
+          .map((group, groupIndex) => {
+            const hash = group[0].hash;
+            return `
+          <div class="group" data-group-index="${groupIndex}">
+            <div class="group-header" onclick="toggleGroup(${groupIndex})">
+              <span class="collapse-indicator">▼</span>
+              <h3>Group ${groupIndex + 1} - ${group[0].formattedSize} - ${
+              hash ? hash.slice(0, 8) : "calculating..."
+            }</h3>
+              <label>
+                <input type="checkbox" 
+                       onchange="toggleGroupSelection(${groupIndex}, this.checked); event.stopPropagation();" 
+                       class="group-checkbox"
+                       aria-label="Select all files in group ${groupIndex + 1}">
+                Select All
+              </label>
+            </div>
+            <div class="group-content">
+              ${group
+                .map((file, fileIndex) => {
+                  // Properly escape the file path for both HTML and JavaScript
+                  const escapedPath = file.path
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+                  const jsEscapedPath = file.path.replace(/['\\]/g, "\\$&");
+
+                  return `
+                <div class="file" data-file-index="${fileIndex}">
+                  <div class="file-select">
+                    <input type="checkbox" 
+                           class="file-checkbox" 
+                           data-path="${escapedPath}"
+                           onchange="updateDeleteButton()"
+                           aria-label="Select ${escapedPath}">
+                  </div>
+                  <div class="file-info">
+                    <div class="file-icon">${getFileIcon(file.path)}</div>
+                    <div class="file-details">
+                      <div class="file-path">${escapedPath}</div>
+                      <div class="file-meta">
+                        <span>Size: ${file.formattedSize}</span>
+                        <span>Modified: ${formatDate(file.modified)}</span>
+                        <span>Created: ${formatDate(file.created)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="actions">
+                    <div class="rename-container">
+                      <input type="text" 
+                             placeholder="New name" 
+                             onkeyup="if(event.key==='Enter') renameFile(${groupIndex}, ${fileIndex}, this)"
+                             aria-label="New name for ${escapedPath}">
+                      <button class="rename-btn" 
+                              onclick="renameFile(${groupIndex}, ${fileIndex}, this.previousElementSibling)">
+                        Rename
+                      </button>
+                    </div>
+                    <button class="preview-btn" onclick="previewFile('${jsEscapedPath}')" aria-label="Preview ${escapedPath}">Preview</button>
+                    <button class="download" onclick="downloadFile('${jsEscapedPath}')" aria-label="Download ${escapedPath}">Download</button>
+                    <button class="delete individual-delete" onclick="deleteFile('${jsEscapedPath}')" aria-label="Delete ${escapedPath}">Delete</button>
+                  </div>
+                </div>
+              `;
+                })
+                .join("")}
+            </div>
+          </div>
+        `;
+          })
+          .join("");
+
+        updateDeleteButton();
+      }
+      function updateDeleteButton() {
+        const selectedCount = document.querySelectorAll(
+          ".file-checkbox:checked"
+        ).length;
+        const deleteBtn = document.getElementById("deleteSelectedBtn");
+        deleteBtn.disabled = selectedCount === 0;
+        deleteBtn.textContent = `Delete Selected (${selectedCount})`;
+      }
+
+      function toggleGroupSelection(groupIndex, checked) {
+        const group = document.querySelector(
+          `.group[data-group-index="${groupIndex}"]`
+        );
+        group.querySelectorAll(".file-checkbox").forEach((checkbox) => {
+          checkbox.checked = checked;
+        });
+        updateDeleteButton();
+      }
+
+      let pipeline;
+      let modelLoading = false;
+
+      async function initializeModel() {
+        if (pipeline || modelLoading) return;
+        modelLoading = true;
+
+        try {
+          pipeline = await window.pipeline(
+            "feature-extraction",
+            "Xenova/all-MiniLM-L6-v2"
+          );
+        } finally {
+          modelLoading = false;
+        }
+      }
+
+      // Scoring criteria for smart selection
+      function getSmartScore(filePath, metadata) {
+        // Initialize with base score
+        let score = 0;
+        const path = filePath.toLowerCase();
+
+        // Scoring criteria:
+        // 1. Prefer keeping files in common user directories
+        if (path.includes("/documents/")) score += 2;
+        if (path.includes("/desktop/")) score += 1;
+        if (path.includes("/downloads/")) score -= 1;
+        if (path.includes("/temp/") || path.includes("/tmp/")) score -= 2;
+
+        // 2. Prefer keeping recently modified files
+        const modifiedDate = new Date(metadata.modified);
+        const now = new Date();
+        const daysSinceModified = (now - modifiedDate) / (1000 * 60 * 60 * 24);
+        score += Math.max(-3, Math.min(3, 2 - daysSinceModified / 30)); // Scale based on months
+
+        // 3. Prefer keeping files with more descriptive names
+        const fileName = path.split("/").pop();
+        if (fileName.length > 20) score += 1; // More descriptive names tend to be longer
+        if (/^[a-zA-Z]/.test(fileName)) score += 0.5; // Prefer names that start with letters
+        if (/\d{8,}/.test(fileName)) score -= 0.5; // Penalize names with long number sequences
+
+        // 4. File organization signals
+        if (path.split("/").length > 4) score += 1; // Organized in deeper directory structure
+        if (/^[\d-_]+$/.test(fileName.split(".")[0])) score -= 1; // Penalize pure numeric/symbol names
+
+        return score;
+      }
+
+      async function applySmartSelection(files) {
+        await initializeModel();
+        if (!pipeline) {
+          console.error("Failed to load AI model");
+          return null;
+        }
+
+        // Get embeddings for all file paths
+        const fileData = await Promise.all(
+          files.map(async (file) => {
+            const path = file.querySelector(".file-path").textContent;
+            const metadata = {
+              modified: file
+                .querySelector(".file-meta")
+                .textContent.match(/Modified: (.*?)(?=\s|$)/)[1],
+            };
+
+            // Get embedding for the file path
+            const embedding = await pipeline(path, {
+              pooling: "mean",
+              normalize: true,
+            });
+
+            // Combine embedding with traditional heuristics
+            const smartScore = getSmartScore(path, metadata);
+
+            return {
+              file,
+              path,
+              embedding: embedding.data,
+              smartScore,
+            };
+          })
+        );
+
+        // Calculate similarity scores between files
+        for (let i = 0; i < fileData.length; i++) {
+          let similarityScore = 0;
+          for (let j = 0; j < fileData.length; j++) {
+            if (i !== j) {
+              // Calculate cosine similarity between embeddings
+              const similarity = fileData[i].embedding.reduce(
+                (sum, val, idx) => sum + val * fileData[j].embedding[idx],
+                0
+              );
+              similarityScore += similarity;
+            }
+          }
+          fileData[i].similarityScore = similarityScore / (fileData.length - 1);
+        }
+
+        // Make final decision based on both smart score and similarity
+        fileData.forEach((data) => {
+          data.finalScore = data.smartScore + data.similarityScore * 2;
+        });
+
+        // Sort by final score and mark all but the highest scoring file for deletion
+        const sortedFiles = fileData.sort(
+          (a, b) => b.finalScore - a.finalScore
+        );
+        return sortedFiles.slice(1).map((data) => data.file);
+      }
+
+      async function applyAutoSelect() {
+        const mode = document.getElementById("autoSelect").value;
+        const groups = document.querySelectorAll(".group");
+
+        for (const group of groups) {
+          const files = Array.from(group.querySelectorAll(".file"));
+          const checkboxes = files.map((f) =>
+            f.querySelector(".file-checkbox")
+          );
+
+          // Uncheck all first
+          checkboxes.forEach((cb) => (cb.checked = false));
+
+          switch (mode) {
+            case "allButFirst":
+              checkboxes.slice(1).forEach((cb) => (cb.checked = true));
+              break;
+            case "allButLast":
+              checkboxes.slice(0, -1).forEach((cb) => (cb.checked = true));
+              break;
+            case "longestName":
+              const longest = files.reduce((a, b) =>
+                a.querySelector(".file-path").textContent.length >
+                b.querySelector(".file-path").textContent.length
+                  ? a
+                  : b
+              );
+              longest.querySelector(".file-checkbox").checked = true;
+              break;
+            case "shortestName":
+              const shortest = files.reduce((a, b) =>
+                a.querySelector(".file-path").textContent.length <
+                b.querySelector(".file-path").textContent.length
+                  ? a
+                  : b
+              );
+              shortest.querySelector(".file-checkbox").checked = true;
+              break;
+            case "deepestPath":
+              const deepest = files.reduce((a, b) =>
+                (a.querySelector(".file-path").textContent.match(/\//g) || [])
+                  .length >
+                (b.querySelector(".file-path").textContent.match(/\//g) || [])
+                  .length
+                  ? a
+                  : b
+              );
+              deepest.querySelector(".file-checkbox").checked = true;
+              break;
+            case "shallowestPath":
+              const shallowest = files.reduce((a, b) =>
+                (a.querySelector(".file-path").textContent.match(/\//g) || [])
+                  .length <
+                (b.querySelector(".file-path").textContent.match(/\//g) || [])
+                  .length
+                  ? a
+                  : b
+              );
+              shallowest.querySelector(".file-checkbox").checked = true;
+              break;
+            case "smart":
+              // Show loading state
+              const loadingIndicator = document.createElement("div");
+              loadingIndicator.textContent = "AI is analyzing files...";
+              loadingIndicator.style.position = "fixed";
+              loadingIndicator.style.top = "50%";
+              loadingIndicator.style.left = "50%";
+              loadingIndicator.style.transform = "translate(-50%, -50%)";
+              loadingIndicator.style.padding = "1rem";
+              loadingIndicator.style.background = "var(--bg-secondary)";
+              loadingIndicator.style.border = "1px solid var(--border-color)";
+              loadingIndicator.style.borderRadius = "4px";
+              loadingIndicator.style.zIndex = "1000";
+              document.body.appendChild(loadingIndicator);
+
+              try {
+                const filesToDelete = await applySmartSelection(files);
+                if (filesToDelete) {
+                  filesToDelete.forEach((file) => {
+                    file.querySelector(".file-checkbox").checked = true;
+                  });
+                }
+              } catch (error) {
+                console.error("Smart selection failed:", error);
+                alert(
+                  "Smart selection failed. Falling back to manual selection."
+                );
+              } finally {
+                document.body.removeChild(loadingIndicator);
+              }
+              break;
+          }
+        }
+
+        updateDeleteButton();
+      }
+      async function loadDuplicates() {
+        const response = await fetch("/api/duplicates");
+        duplicateGroups = await response.json();
+        renderGroups();
+        updateStats();
+      }
+
+      async function loadScanInfo() {
+        try {
+          const response = await fetch("/api/scan-info");
+          const info = await response.json();
+
+          if (info) {
+            const scanInfo = document.getElementById("scanInfo");
+            scanInfo.classList.add("show");
+            scanInfo.innerHTML = `
+        <div class="scan-info-item">
+          Base Directory: <span class="scan-info-value">${
+            info.baseDirectory
+          }</span>
+        </div>
+        <div class="scan-info-item">
+          Scan Time: <span class="scan-info-value">${formatDuration(
+            info.endTime - info.startTime
+          )}</span>
+        </div>
+        <div class="scan-info-item">
+          Files Scanned: <span class="scan-info-value">${
+            info.filesScanned
+          }</span>
+        </div>
+        <div class="scan-info-item">
+          Groups Found: <span class="scan-info-value">${info.groupsFound}</span>
+        </div>
+      `;
+          }
+        } catch (error) {
+          console.error("Failed to load scan info:", error);
+        }
+      }
+
+      function formatDuration(ms) {
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+
+        if (hours > 0) {
+          return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+        } else if (minutes > 0) {
+          return `${minutes}m ${seconds % 60}s`;
+        } else {
+          return `${seconds}s`;
+        }
+      }
+
+      function toggleHeader() {
+        const headerContent = document.querySelector(".header-content");
+        headerContent.classList.toggle("collapsed");
+        const btn = document.querySelector(".collapse-header-btn");
+        btn.textContent = headerContent.classList.contains("collapsed")
+          ? "▲"
+          : "▼";
+      }
 
       // Initialize
       loadDuplicates();
+      loadScanInfo();
 
       // Close preview modal when clicking outside
       document

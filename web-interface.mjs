@@ -1,26 +1,54 @@
 import express from "express";
 import open from "open";
 import fs from "fs/promises";
+import { createReadStream } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import mime from "mime-types";
+import { ScanDatabase } from "./database.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export async function startWebInterface(duplicates, port = 8080) {
+export async function startWebInterface(
+  duplicates,
+  port = 8080,
+  dbPath,
+  scanId
+) {
   const app = express();
   app.use(express.json());
   app.use(express.static(path.join(__dirname, "public")));
 
-  // Store duplicates with all metadata
-  let dupeGroups = duplicates;
+  // Initialize database connection
+  const db = dbPath ? new ScanDatabase(dbPath) : null;
 
   app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index.html"));
   });
 
   app.get("/api/duplicates", (req, res) => {
-    res.json(dupeGroups);
+    if (db) {
+      const groups = db.getDuplicateGroups(scanId);
+      // Fix: Parse the JSON string before sending
+      res.json(groups.map((g) => JSON.parse(g.files)));
+    } else {
+      res.json(duplicates);
+    }
+  });
+
+  app.get("/api/scan-info", (req, res) => {
+    if (db) {
+      const info = db.getScanInfo(scanId);
+      res.json({
+        baseDirectory: info.base_directory,
+        startTime: info.start_time,
+        endTime: info.end_time,
+        filesScanned: info.files_scanned,
+        groupsFound: info.groups_found,
+      });
+    } else {
+      res.json(null);
+    }
   });
 
   app.get("/api/download/:encodedPath", async (req, res) => {
@@ -33,11 +61,17 @@ export async function startWebInterface(duplicates, port = 8080) {
       const fileName = path.basename(filePath);
       const mimeType = mime.lookup(filePath) || "application/octet-stream";
 
-      // For text files and images, allow display in browser
-      const disposition =
-        mimeType.startsWith("text/") || mimeType.startsWith("image/")
-          ? "inline"
-          : "attachment";
+      // For media files and text files, allow display in browser
+      const inlineTypes = [
+        "text/",
+        "image/",
+        "video/",
+        "audio/",
+        "application/pdf",
+      ];
+      const disposition = inlineTypes.some((type) => mimeType.startsWith(type))
+        ? "inline"
+        : "attachment";
 
       res.setHeader("Content-Type", mimeType);
       res.setHeader(
@@ -45,7 +79,9 @@ export async function startWebInterface(duplicates, port = 8080) {
         `${disposition}; filename="${encodeURIComponent(fileName)}"`
       );
 
-      res.download(filePath, fileName);
+      // Stream the file
+      const stream = createReadStream(filePath);
+      stream.pipe(res);
     } catch (error) {
       res.status(500).json({
         error: "Failed to download file",
@@ -63,10 +99,9 @@ export async function startWebInterface(duplicates, port = 8080) {
 
       await fs.unlink(filePath);
 
-      // Update the groups after deletion
-      dupeGroups = dupeGroups
-        .map((group) => group.filter((file) => file.path !== filePath))
-        .filter((group) => group.length > 1);
+      if (db) {
+        db.deleteFile(filePath);
+      }
 
       res.json({
         success: true,
@@ -109,19 +144,10 @@ export async function startWebInterface(duplicates, port = 8080) {
       // Get updated file stats
       const stats = await fs.stat(newPath);
 
-      // Update the file path and metadata in our data structure
-      dupeGroups = dupeGroups.map((group) =>
-        group.map((file) =>
-          file.path === oldPath
-            ? {
-                ...file,
-                path: newPath,
-                name: newName,
-                modified: stats.mtime,
-              }
-            : file
-        )
-      );
+      if (db) {
+        // Update the file path in the database
+        db.updateFilePath(oldPath, newPath);
+      }
 
       res.json({
         success: true,
@@ -136,7 +162,22 @@ export async function startWebInterface(duplicates, port = 8080) {
     }
   });
 
-  app.post("/api/shutdown", (req, res) => {
+  app.post("/api/shutdown", async (req, res) => {
+    const { deleteIndex } = req.body;
+
+    if (deleteIndex && dbPath) {
+      try {
+        // Close database connection
+        if (db) {
+          db.close();
+        }
+        // Delete the index file
+        await fs.unlink(dbPath);
+      } catch (error) {
+        console.error("Failed to delete index file:", error);
+      }
+    }
+
     res.json({
       success: true,
       message: "Server shutting down",
@@ -155,7 +196,18 @@ export async function startWebInterface(duplicates, port = 8080) {
         console.log("\n🔍 super-dee-duper Web Interface");
         console.log("==========================================");
         console.log(`✨ Server started at: ${url}`);
-        console.log("📁 Found duplicates:", dupeGroups.length, "groups");
+        if (db) {
+          const info = db.getScanInfo(scanId);
+          console.log(`📁 Base directory: ${info.base_directory}`);
+          console.log(`📊 Files scanned: ${info.files_scanned}`);
+          console.log(`🔍 Groups found: ${info.groups_found}`);
+          if (info.end_time) {
+            const duration = info.end_time - info.start_time;
+            console.log(`⏱️  Scan time: ${Math.round(duration / 1000)}s`);
+          }
+        } else {
+          console.log("📁 Found duplicates:", duplicates.length, "groups");
+        }
         console.log("==========================================\n");
 
         try {
