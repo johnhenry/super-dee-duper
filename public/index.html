@@ -5,29 +5,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
-      /* Previous CSS rules unchanged until group-header */
       :root {
         --bg-primary: #ffffff;
-        --bg-secondary: #fafafa;
+        --bg-secondary: #f8f8f8;
         --text-primary: #000000;
         --text-secondary: #666666;
         --border-color: #e0e0e0;
-        --accent-color: #0078d4;
-        --delete-color: #d13438;
-        --success-color: #107c10;
-        --warning-color: #797673;
+        --accent-color: #7c3aed;
+        --delete-color: #ef4444;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
       }
 
       [data-theme="dark"] {
-        --bg-primary: #1f1f1f;
-        --bg-secondary: #2d2d2d;
+        --bg-primary: #18181b;
+        --bg-secondary: #27272a;
         --text-primary: #ffffff;
-        --text-secondary: #cccccc;
-        --border-color: #404040;
-        --accent-color: #4cc2ff;
-        --delete-color: #ff99a4;
-        --success-color: #16c60c;
-        --warning-color: #c8c6c4;
+        --text-secondary: #a1a1aa;
+        --border-color: #3f3f46;
+        --accent-color: #8b5cf6;
+        --delete-color: #f87171;
+        --success-color: #34d399;
+        --warning-color: #fbbf24;
       }
 
       body {
@@ -59,6 +58,32 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 20px;
+      }
+
+      .stats {
+        background: var(--bg-secondary);
+        padding: 10px;
+        margin-bottom: 20px;
+        border: 1px solid var(--border-color);
+        display: flex;
+        gap: 20px;
+      }
+
+      .stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--accent-color);
+      }
+
+      .stat-label {
+        font-size: 14px;
+        color: var(--text-secondary);
       }
 
       h1 {
@@ -96,13 +121,13 @@
       .group-header {
         display: flex;
         align-items: center;
-        padding: 15px 20px;
+        padding: 15px;
         cursor: pointer;
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
         user-select: none;
+        -webkit-user-select: none;
         border-bottom: 1px solid var(--border-color);
+        background: var(--accent-color);
+        color: white;
       }
 
       .group-header h3 {
@@ -113,24 +138,39 @@
       }
 
       .group-content {
-        padding: 20px;
+        padding: 0;
       }
 
       .file {
         display: flex;
-        align-items: start;
-        padding: 15px;
-        margin: 10px 0;
+        align-items: center;
+        padding: 10px;
         background: var(--bg-primary);
-        border: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .file:last-child {
+        border-bottom: none;
       }
 
       .file-select {
         margin-right: 15px;
-        padding-top: 2px;
       }
 
       .file-info {
+        flex-grow: 1;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .file-icon {
+        font-size: 20px;
+        width: 24px;
+        text-align: center;
+      }
+
+      .file-details {
         flex-grow: 1;
       }
 
@@ -150,9 +190,8 @@
 
       .actions {
         display: flex;
-        gap: 10px;
+        gap: 5px;
         align-items: center;
-        flex-wrap: wrap;
       }
 
       button {
@@ -164,7 +203,6 @@
         transition: all 0.2s;
         font-weight: 500;
         font-size: 14px;
-        min-width: 80px;
         height: 32px;
         display: inline-flex;
         align-items: center;
@@ -203,6 +241,16 @@
         color: var(--text-primary);
         height: 32px;
         font-size: 14px;
+        box-sizing: border-box;
+      }
+
+      .rename-container {
+        display: flex;
+        gap: 5px;
+      }
+
+      .rename-container input {
+        width: 120px;
       }
 
       .top-actions {
@@ -291,6 +339,7 @@
       .collapse-indicator {
         margin-right: 10px;
         transition: transform 0.3s;
+        color: white;
       }
 
       .collapsed .collapse-indicator {
@@ -301,23 +350,39 @@
         display: none;
       }
 
-      @media (max-width: 768px) {
-        .group-header {
-          flex-direction: column;
-          align-items: flex-start;
-        }
+      .batch-rename {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 10px;
+      }
 
+      @media (max-width: 768px) {
         .actions {
-          flex-direction: column;
-          align-items: stretch;
+          flex-wrap: wrap;
         }
 
         .file {
           flex-direction: column;
+          gap: 10px;
         }
 
         .file-select {
-          margin-bottom: 10px;
+          align-self: flex-start;
+        }
+
+        .actions {
+          width: 100%;
+          justify-content: flex-end;
+        }
+
+        .rename-container {
+          width: 100%;
+        }
+
+        .rename-container input {
+          flex-grow: 1;
+          width: auto;
         }
       }
     </style>
@@ -335,6 +400,25 @@
             >
               🌓
             </button>
+          </div>
+        </div>
+
+        <div class="stats" id="stats">
+          <div class="stat-item">
+            <div class="stat-value" id="totalGroups">0</div>
+            <div class="stat-label">Groups</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="totalFiles">0</div>
+            <div class="stat-label">Files</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="totalSize">0</div>
+            <div class="stat-label">Total Size</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="potentialSavings">0</div>
+            <div class="stat-label">Potential Savings</div>
           </div>
         </div>
 
@@ -380,6 +464,7 @@
 
         <div class="top-actions">
           <button onclick="toggleAllGroups()">Toggle All Groups</button>
+          <button onclick="showBatchRename()">Batch Rename</button>
           <button
             class="delete-selected"
             onclick="deleteSelected()"
@@ -433,6 +518,52 @@
       let duplicateGroups = [];
       let allGroupsExpanded = true;
 
+      function getFileIcon(path) {
+        const ext = path.toLowerCase().split(".").pop();
+        const imageExts = ["jpg", "jpeg", "png", "gif", "bmp", "webp"];
+        const documentExts = ["pdf", "doc", "docx", "txt", "md", "rtf"];
+        const videoExts = ["mp4", "avi", "mov", "wmv", "flv", "mkv"];
+
+        if (imageExts.includes(ext)) return "🖼️";
+        if (documentExts.includes(ext)) return "📄";
+        if (videoExts.includes(ext)) return "🎥";
+        return "📁";
+      }
+
+      function updateStats() {
+        const totalGroups = duplicateGroups.length;
+        const totalFiles = duplicateGroups.reduce(
+          (sum, group) => sum + group.length,
+          0
+        );
+        const totalSize = duplicateGroups.reduce((sum, group) => {
+          return sum + group[0].size * group.length;
+        }, 0);
+        const potentialSavings = duplicateGroups.reduce((sum, group) => {
+          return sum + group[0].size * (group.length - 1);
+        }, 0);
+
+        document.getElementById("totalGroups").textContent = totalGroups;
+        document.getElementById("totalFiles").textContent = totalFiles;
+        document.getElementById("totalSize").textContent =
+          formatSize(totalSize);
+        document.getElementById("potentialSavings").textContent =
+          formatSize(potentialSavings);
+      }
+
+      function formatSize(bytes) {
+        const units = ["B", "KB", "MB", "GB", "TB"];
+        let size = bytes;
+        let unitIndex = 0;
+
+        while (size >= 1024 && unitIndex < units.length - 1) {
+          size /= 1024;
+          unitIndex++;
+        }
+
+        return `${size.toFixed(1)}${units[unitIndex]}`;
+      }
+
       function toggleAllGroups() {
         allGroupsExpanded = !allGroupsExpanded;
         document.querySelectorAll(".group").forEach((group) => {
@@ -449,6 +580,52 @@
           `.group[data-group-index="${groupIndex}"]`
         );
         group.classList.toggle("collapsed");
+      }
+
+      function showBatchRename() {
+        const selectedFiles = Array.from(
+          document.querySelectorAll(".file-checkbox:checked")
+        ).map((checkbox) => checkbox.dataset.path);
+
+        if (selectedFiles.length === 0) {
+          alert("Please select files to rename");
+          return;
+        }
+
+        const pattern = prompt(
+          "Enter rename pattern:\n{n} = original name\n{i} = index\n{ext} = extension"
+        );
+        if (!pattern) return;
+
+        batchRename(selectedFiles, pattern);
+      }
+
+      async function batchRename(files, pattern) {
+        for (let i = 0; i < files.length; i++) {
+          const oldPath = files[i];
+          const oldName = oldPath.split("/").pop();
+          const ext = oldName.includes(".") ? oldName.split(".").pop() : "";
+          const baseName = oldName.includes(".")
+            ? oldName.slice(0, -ext.length - 1)
+            : oldName;
+
+          const newName = pattern
+            .replace("{n}", baseName)
+            .replace("{i}", (i + 1).toString().padStart(2, "0"))
+            .replace("{ext}", ext ? `.${ext}` : "");
+
+          try {
+            await fetch("/api/rename", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ oldPath, newName }),
+            });
+          } catch (error) {
+            console.error(`Failed to rename ${oldPath}:`, error);
+          }
+        }
+
+        loadDuplicates();
       }
 
       function getFileType(path) {
@@ -471,6 +648,7 @@
         const response = await fetch("/api/duplicates");
         duplicateGroups = await response.json();
         renderGroups();
+        updateStats();
       }
 
       function applyFilters() {
@@ -536,11 +714,14 @@
                            aria-label="Select ${file.path}">
                   </div>
                   <div class="file-info">
-                    <div class="file-path">${file.path}</div>
-                    <div class="file-meta">
-                      <span>Size: ${file.formattedSize}</span>
-                      <span>Modified: ${formatDate(file.modified)}</span>
-                      <span>Created: ${formatDate(file.created)}</span>
+                    <div class="file-icon">${getFileIcon(file.path)}</div>
+                    <div class="file-details">
+                      <div class="file-path">${file.path}</div>
+                      <div class="file-meta">
+                        <span>Size: ${file.formattedSize}</span>
+                        <span>Modified: ${formatDate(file.modified)}</span>
+                        <span>Created: ${formatDate(file.created)}</span>
+                      </div>
                     </div>
                   </div>
                   <div class="actions">

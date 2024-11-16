@@ -1,84 +1,157 @@
 # Duplicate File Scanner
 
-A powerful CLI tool for finding and managing duplicate files in your system. It provides both command-line output and an interactive web interface for managing duplicates.
+A powerful tool for finding and managing duplicate files with both CLI and web interfaces.
 
 ## Features
 
-- Scan directories for duplicate files using SHA-256 hash comparison
-- Recursive directory scanning
+- Find duplicate files using secure hash comparison
 - Interactive web interface for managing duplicates
-- Command-line output option
-- File management operations:
-  - Download files
-  - Delete duplicates
-  - Rename files
-- Real-time updates in web interface
+- Console output for quick scanning
+- Batch rename capabilities
+- File preview support
+- Dark mode support
+- Space savings analysis
+- File type filtering
+- Test file generation for development
 
 ## Installation
 
 ```bash
+# Clone the repository
+git clone [repository-url]
+cd dupe-scanner
+
+# Install dependencies
 npm install
-chmod +x cli.js
 ```
 
 ## Usage
 
-### Basic Scanning
+### Command Line Interface
+
+1. Scan for duplicates:
 
 ```bash
-./cli.js [directory]
+# Scan current directory
+node cli.mjs scan
+
+# Scan specific directory recursively
+node cli.mjs scan ./test-dir -r
+
+# Show results in console instead of web interface
+node cli.mjs scan ./test-dir -r -n
 ```
 
-### Options
-
-- `-r, --recursive`: Scan directories recursively
-- `-n, --no-web`: Disable web interface and show results in console
-
-### Examples
-
-Scan current directory:
-```bash
-./cli.js
-```
-
-Scan directory recursively:
-```bash
-./cli.js -r /path/to/directory
-```
-
-Show results in console only:
-```bash
-./cli.js -n /path/to/directory
-```
-
-### Generate Test Files
-
-To create a test directory with duplicate files for testing:
+2. Generate test files (for development/testing):
 
 ```bash
-./generate-test-files.js
+# Generate test files with default settings
+node cli.mjs generate-test
+
+# Generate specific number of files with duplicates
+node cli.mjs generate-test ./test-dir -c 10 -d 2
 ```
 
-## Web Interface
+### CLI Options
 
-The web interface provides an intuitive way to manage duplicate files:
+- `scan [dir]` - Scan directory for duplicates (default: current directory)
 
-- View groups of duplicate files
-- Download any file
-- Delete unwanted duplicates
-- Rename files
-- See file sizes and paths
+  - `-r, --recursive` - Scan directories recursively
+  - `-n, --no-web` - Show results in console instead of web interface
+  - `-p, --port <number>` - Specify port for web interface (default: 8080)
 
-The interface automatically opens in your default browser when you run the tool without the `-n` flag.
+- `generate-test [dir]` - Generate test files
+  - `-c, --count <number>` - Number of unique files to generate (default: 20)
+  - `-d, --duplicates <number>` - Number of duplicates per file (default: 2)
 
-## Technical Details
+### Web Interface
 
-- Uses SHA-256 for file comparison
-- Built with Node.js and Express
-- Provides both CLI and web interfaces
-- Real-time file system operations
-- Efficient handling of large files
+The web interface provides an interactive way to manage duplicate files:
 
-## License
+1. **View Duplicates**
 
-MIT
+   - Files are grouped by content
+   - Each group shows file size and hash
+   - Collapsible groups for better organization
+
+2. **File Management**
+
+   - Preview files (images and text)
+   - Rename files individually
+   - Batch rename with patterns:
+     - `{n}` - Original filename
+     - `{i}` - Index number
+     - `{ext}` - File extension
+
+3. **Filtering**
+
+   - Filter by file path
+   - Filter by file size
+   - Filter by file type
+
+4. **Statistics**
+   - Total number of duplicate groups
+   - Total number of files
+   - Total size
+   - Potential space savings
+
+## Development
+
+### Running Tests
+
+```bash
+# Run tests once
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+```
+
+### Test File Generation
+
+Generate test files for development:
+
+```bash
+# Generate in test-dir
+npm run generate
+
+# Or specify custom parameters
+node cli.mjs generate-test ./test-dir -c 10 -d 2
+```
+
+### Project Structure
+
+```
+dupe-scanner/
+├── cli.mjs              # Command line interface
+├── scanner.mjs          # Core duplicate scanning logic
+├── web-interface.mjs    # Web interface server
+├── console-output.mjs   # Console output formatting
+├── generate-test-files.mjs  # Test file generator
+├── public/             # Web interface static files
+│   └── index.html      # Web interface frontend
+└── tests/              # Test files
+    └── scanner.test.mjs # Scanner unit tests
+```
+
+## Example Workflow
+
+1. Generate some test files:
+
+```bash
+node cli.mjs generate-test ./test-dir -c 5 -d 2
+```
+
+2. Scan for duplicates with web interface:
+
+```bash
+node cli.mjs scan ./test-dir -r
+```
+
+3. Open your browser to http://localhost:8080 to manage duplicates
+
+4. Or view results in console:
+
+```bash
+node cli.mjs scan ./test-dir -r -n
+```

@@ -1,19 +1,45 @@
 {
   "name": "dupe-scanner",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
+  "description": "A tool for finding and managing duplicate files",
+  "main": "cli.mjs",
   "bin": {
-    "dupe-scan": "./cli.js"
+    "dupe-scan": "./cli.mjs"
   },
   "scripts": {
-    "start": "node cli.js",
-    "genfiles":"node generate-test-files.js"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "start": "node cli.mjs scan",
+    "generate": "node cli.mjs generate-test"
   },
+  "jest": {
+    "transform": {},
+    "testEnvironment": "node",
+    "extensionsToTreatAsEsm": [
+      ".mjs"
+    ],
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.mjs$": "$1"
+    }
+  },
+  "keywords": [
+    "duplicate",
+    "files",
+    "scanner",
+    "cleanup"
+  ],
+  "author": "",
+  "license": "MIT",
   "dependencies": {
-    "commander": "^11.1.0",
+    "cli-table3": "^0.6.3",
+    "commander": "^11.0.0",
     "express": "^4.18.2",
-    "open": "^10.0.3",
-    "cli-table3": "^0.6.3"
+    "mime-types": "^2.1.35",
+    "open": "^9.1.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "@jest/globals": "^29.7.0"
   }
 }
