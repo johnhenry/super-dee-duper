@@ -3,7 +3,29 @@ import fs from "fs/promises";
 import { createReadStream } from "fs";
 import path from "path";
 
-// Improved hash calculation using streams for better memory efficiency
+/**
+ * @typedef {Object} FileSize
+ * @property {number} raw - The size in bytes
+ * @property {string} formatted - Human readable formatted size with units
+ */
+
+/**
+ * @typedef {Object} FileInfo
+ * @property {string} path - Full path to the file
+ * @property {string} name - File name
+ * @property {number} size - File size in bytes
+ * @property {string} formattedSize - Human readable file size
+ * @property {Date} created - File creation date
+ * @property {Date} modified - File modification date
+ * @property {string} quickHash - Partial file hash for quick comparison
+ * @property {string|null} hash - Full file hash (calculated on demand)
+ */
+
+/**
+ * Calculate SHA-256 hash of entire file
+ * @param {string} filePath - Path to the file
+ * @returns {Promise<string>} Hex string of file hash
+ */
 async function calculateHash(filePath) {
   return new Promise((resolve, reject) => {
     const hash = crypto.createHash("sha256");
@@ -15,7 +37,11 @@ async function calculateHash(filePath) {
   });
 }
 
-// Quick hash calculation for initial comparison (first 64KB only)
+/**
+ * Calculate quick hash of first 64KB of file
+ * @param {string} filePath - Path to the file
+ * @returns {Promise<string>} Hex string of partial file hash
+ */
 async function calculateQuickHash(filePath) {
   return new Promise((resolve, reject) => {
     const hash = crypto.createHash("sha256");
@@ -27,7 +53,11 @@ async function calculateQuickHash(filePath) {
   });
 }
 
-// Format file size to human readable format
+/**
+ * Format file size to human readable format
+ * @param {number} bytes - Size in bytes
+ * @returns {FileSize} Object containing raw and formatted size
+ */
 function formatFileSize(bytes) {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let size = bytes;
@@ -44,6 +74,12 @@ function formatFileSize(bytes) {
   };
 }
 
+/**
+ * Scan directory for files
+ * @param {string} dir - Directory path to scan
+ * @param {boolean} recursive - Whether to scan subdirectories
+ * @returns {Promise<FileInfo[]>} Array of file information objects
+ */
 async function scanDirectory(dir, recursive) {
   try {
     const files = await fs.readdir(dir, { withFileTypes: true });
@@ -81,6 +117,12 @@ async function scanDirectory(dir, recursive) {
   }
 }
 
+/**
+ * Find duplicate files in a directory
+ * @param {string} dir - Directory path to scan
+ * @param {boolean} recursive - Whether to scan subdirectories
+ * @returns {Promise<FileInfo[][]>} Array of file groups, where each group contains duplicate files
+ */
 export async function findDuplicates(dir, recursive) {
   try {
     const files = await scanDirectory(dir, recursive);

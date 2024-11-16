@@ -1,9 +1,22 @@
 {
-  "name": "dupe-scanner",
-  "version": "1.0.0",
+  "name": "super-dee-duper",
+  "author": "John Henry",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/johnhenry/super-dee-duper"
+  },
+  "bugs": {
+    "url": "https://github.com/johnhenry/super-dee-duper/issues"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "homepage": "https://github.com/johnhenry/super-dee-duper",
+  "version": "0.0.1",
   "type": "module",
   "description": "A tool for finding and managing duplicate files",
   "main": "cli.mjs",
+  "types": "index.d.ts",
   "bin": {
     "dupe-scan": "./cli.mjs"
   },
@@ -11,14 +24,12 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "start": "node cli.mjs scan",
-    "generate": "node cli.mjs generate-test"
+    "generate": "node cli.mjs generate-test",
+    "demo": "node cli.mjs generate-test ./test-dir -c 5 -d 2 && node cli.mjs scan ./test-dir -r"
   },
   "jest": {
     "transform": {},
     "testEnvironment": "node",
-    "extensionsToTreatAsEsm": [
-      ".mjs"
-    ],
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.mjs$": "$1"
     }
@@ -29,7 +40,6 @@
     "scanner",
     "cleanup"
   ],
-  "author": "",
   "license": "MIT",
   "dependencies": {
     "cli-table3": "^0.6.3",

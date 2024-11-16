@@ -1,4 +1,4 @@
-# Duplicate File Scanner
+# Super Dee Duper
 
 A powerful tool for finding and managing duplicate files with both CLI and web interfaces.
 
@@ -14,15 +14,22 @@ A powerful tool for finding and managing duplicate files with both CLI and web i
 - File type filtering
 - Test file generation for development
 
-## Installation
+## Installation from npm (recommended)
+
+```bash
+npm install --global super-dee-duper
+```
+
+## Install fron github
 
 ```bash
 # Clone the repository
-git clone [repository-url]
+git clone https://github.com/johnhenry/super-dee-duper
 cd dupe-scanner
-
 # Install dependencies
 npm install
+# Link
+npm link
 ```
 
 ## Usage
@@ -33,23 +40,23 @@ npm install
 
 ```bash
 # Scan current directory
-node cli.mjs scan
+super-dee-duper scan
 
 # Scan specific directory recursively
-node cli.mjs scan ./test-dir -r
+super-dee-duper scan ./test-dir -r
 
 # Show results in console instead of web interface
-node cli.mjs scan ./test-dir -r -n
+super-dee-duper scan ./test-dir -r -n
 ```
 
 2. Generate test files (for development/testing):
 
 ```bash
 # Generate test files with default settings
-node cli.mjs generate-test
+super-dee-duper generate-test
 
 # Generate specific number of files with duplicates
-node cli.mjs generate-test ./test-dir -c 10 -d 2
+super-dee-duper generate-test ./test-dir -c 10 -d 2
 ```
 
 ### CLI Options
@@ -116,7 +123,7 @@ Generate test files for development:
 npm run generate
 
 # Or specify custom parameters
-node cli.mjs generate-test ./test-dir -c 10 -d 2
+super-dee-duper generate-test ./test-dir -c 10 -d 2
 ```
 
 ### Project Structure
@@ -139,13 +146,13 @@ dupe-scanner/
 1. Generate some test files:
 
 ```bash
-node cli.mjs generate-test ./test-dir -c 5 -d 2
+super-dee-duper generate-test ./test-dir -c 5 -d 2
 ```
 
 2. Scan for duplicates with web interface:
 
 ```bash
-node cli.mjs scan ./test-dir -r
+super-dee-duper scan ./test-dir -r
 ```
 
 3. Open your browser to http://localhost:8080 to manage duplicates
@@ -153,5 +160,5 @@ node cli.mjs scan ./test-dir -r
 4. Or view results in console:
 
 ```bash
-node cli.mjs scan ./test-dir -r -n
+super-dee-duper scan ./test-dir -r -n
 ```

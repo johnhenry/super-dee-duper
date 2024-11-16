@@ -5,6 +5,34 @@ import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 
+async function cleanDirectory(dir) {
+  try {
+    const files = await fs.readdir(dir, { withFileTypes: true });
+    for (const file of files) {
+      const fullPath = path.join(dir, file.name);
+      if (file.isDirectory()) {
+        await cleanDirectory(fullPath);
+        await fs.rmdir(fullPath);
+      } else {
+        await fs.unlink(fullPath);
+      }
+    }
+  } catch (error) {
+    console.error(`Error cleaning directory ${dir}:`, error);
+  }
+}
+
+async function getAllFiles(dir) {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  const files = await Promise.all(
+    entries.map(async (entry) => {
+      const fullPath = path.join(dir, entry.name);
+      return entry.isDirectory() ? getAllFiles(fullPath) : fullPath;
+    })
+  );
+  return files.flat();
+}
+
 describe("Scanner", () => {
   const TEST_DIR = path.join(process.cwd(), "test-output");
 
@@ -28,10 +56,7 @@ describe("Scanner", () => {
 
   beforeEach(async () => {
     // Clear test directory before each test
-    const files = await fs.readdir(TEST_DIR);
-    await Promise.all(
-      files.map((file) => fs.unlink(path.join(TEST_DIR, file)))
-    );
+    await cleanDirectory(TEST_DIR);
   });
 
   test("should find duplicate files", async () => {
@@ -115,10 +140,7 @@ describe("Test File Generator", () => {
   });
 
   beforeEach(async () => {
-    const files = await fs.readdir(TEST_DIR);
-    await Promise.all(
-      files.map((file) => fs.unlink(path.join(TEST_DIR, file)))
-    );
+    await cleanDirectory(TEST_DIR);
   });
 
   test("should generate correct number of files and duplicates", async () => {
@@ -127,10 +149,10 @@ describe("Test File Generator", () => {
 
     await generateTestFiles(TEST_DIR, fileCount, duplicateCount);
 
-    const files = await fs.readdir(TEST_DIR);
-    expect(files).toHaveLength(fileCount * duplicateCount);
+    const allFiles = await getAllFiles(TEST_DIR);
+    expect(allFiles.length).toBe(fileCount * duplicateCount);
 
-    const duplicates = await findDuplicates(TEST_DIR, false);
+    const duplicates = await findDuplicates(TEST_DIR, true);
     expect(duplicates).toHaveLength(fileCount);
     duplicates.forEach((group) => {
       expect(group).toHaveLength(duplicateCount);
@@ -140,8 +162,8 @@ describe("Test File Generator", () => {
   test("should generate files with different types", async () => {
     await generateTestFiles(TEST_DIR, 10, 2);
 
-    const files = await fs.readdir(TEST_DIR);
-    const extensions = new Set(files.map((file) => path.extname(file)));
+    const allFiles = await getAllFiles(TEST_DIR);
+    const extensions = new Set(allFiles.map((file) => path.extname(file)));
 
     // Should have multiple different extensions
     expect(extensions.size).toBeGreaterThan(1);
@@ -149,7 +171,6 @@ describe("Test File Generator", () => {
 
   test("should handle invalid input", async () => {
     await expect(generateTestFiles(TEST_DIR, -1, 2)).rejects.toThrow();
-
     await expect(generateTestFiles(TEST_DIR, 1, -1)).rejects.toThrow();
   });
 });
