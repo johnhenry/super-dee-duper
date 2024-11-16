@@ -5,144 +5,525 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
+      /* Previous CSS rules unchanged until group-header */
+      :root {
+        --bg-primary: #ffffff;
+        --bg-secondary: #fafafa;
+        --text-primary: #000000;
+        --text-secondary: #666666;
+        --border-color: #e0e0e0;
+        --accent-color: #0078d4;
+        --delete-color: #d13438;
+        --success-color: #107c10;
+        --warning-color: #797673;
+      }
+
+      [data-theme="dark"] {
+        --bg-primary: #1f1f1f;
+        --bg-secondary: #2d2d2d;
+        --text-primary: #ffffff;
+        --text-secondary: #cccccc;
+        --border-color: #404040;
+        --accent-color: #4cc2ff;
+        --delete-color: #ff99a4;
+        --success-color: #16c60c;
+        --warning-color: #c8c6c4;
+      }
+
       body {
-        font-family: system-ui;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        transition: background-color 0.3s, color 0.3s;
+        line-height: 1.5;
+      }
+
+      .header-container {
+        position: sticky;
+        top: 0;
+        background: var(--bg-primary);
+        z-index: 100;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .header-content {
         max-width: 1200px;
         margin: 0 auto;
         padding: 20px;
       }
-      .group {
-        background: #f5f5f5;
-        padding: 20px;
-        margin: 20px 0;
-        border-radius: 8px;
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
       }
+
+      h1 {
+        font-size: 28px;
+        font-weight: 600;
+        margin: 0;
+      }
+
+      .controls {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+      }
+
+      .theme-toggle {
+        background: none;
+        border: 1px solid var(--border-color);
+        padding: 8px;
+        cursor: pointer;
+        color: var(--text-primary);
+      }
+
+      .main-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .group {
+        background: var(--bg-secondary);
+        margin: 20px 0;
+        border: 1px solid var(--border-color);
+      }
+
       .group-header {
         display: flex;
         align-items: center;
-        margin-bottom: 15px;
+        padding: 15px 20px;
+        cursor: pointer;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        border-bottom: 1px solid var(--border-color);
       }
+
       .group-header h3 {
         margin: 0;
         flex-grow: 1;
+        font-size: 18px;
+        font-weight: 600;
       }
+
+      .group-content {
+        padding: 20px;
+      }
+
       .file {
         display: flex;
-        align-items: center;
-        padding: 10px;
-        margin: 5px 0;
-        background: white;
-        border-radius: 4px;
+        align-items: start;
+        padding: 15px;
+        margin: 10px 0;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
       }
+
       .file-select {
         margin-right: 15px;
+        padding-top: 2px;
       }
+
       .file-info {
         flex-grow: 1;
       }
+
+      .file-path {
+        word-break: break-all;
+        margin-bottom: 5px;
+        font-weight: 500;
+      }
+
+      .file-meta {
+        font-size: 14px;
+        color: var(--text-secondary);
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+      }
+
       .actions {
         display: flex;
         gap: 10px;
         align-items: center;
+        flex-wrap: wrap;
       }
+
       button {
-        padding: 5px 10px;
-        border-radius: 4px;
-        border: 1px solid #ddd;
+        padding: 8px 16px;
+        background: var(--accent-color);
+        color: white;
+        border: none;
         cursor: pointer;
         transition: all 0.2s;
+        font-weight: 500;
+        font-size: 14px;
+        min-width: 80px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
       }
+
       button:hover {
-        opacity: 0.9;
+        filter: brightness(110%);
       }
+
+      button:active {
+        filter: brightness(90%);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
       .delete {
-        background: #ff4444;
-        color: white;
-        border: none;
+        background: var(--delete-color);
       }
+
       .download {
-        background: #4caf50;
-        color: white;
-        border: none;
+        background: var(--success-color);
       }
-      .rename-btn {
-        background: #2196f3;
-        color: white;
-        border: none;
+
+      .preview-btn {
+        background: var(--warning-color);
       }
+
       input[type="text"] {
-        padding: 5px;
-        margin-right: 5px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
+        padding: 8px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        height: 32px;
+        font-size: 14px;
       }
+
       .top-actions {
         margin-bottom: 20px;
         display: flex;
         gap: 10px;
+        flex-wrap: wrap;
       }
-      .shutdown-btn {
-        background: #673ab7;
-        color: white;
+
+      .filters {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .filter-input {
+        flex: 1;
+        min-width: 200px;
+      }
+
+      .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .filter-label {
+        color: var(--text-secondary);
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      select {
+        padding: 8px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        cursor: pointer;
+        height: 32px;
+        font-size: 14px;
+      }
+
+      .preview-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 1000;
+        padding: 20px;
+      }
+
+      .preview-content {
+        max-width: 90%;
+        max-height: 90%;
+        margin: 20px auto;
+        background: var(--bg-primary);
+        padding: 20px;
+        overflow: auto;
+      }
+
+      .preview-image {
+        max-width: 100%;
+        height: auto;
+      }
+
+      .preview-text {
+        white-space: pre-wrap;
+        font-family: "Cascadia Code", Consolas, monospace;
+      }
+
+      .close-preview {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
         border: none;
-        padding: 8px 16px;
-      }
-      .delete-selected {
-        background: #ff4444;
         color: white;
-        border: none;
-        padding: 8px 16px;
+        font-size: 24px;
+        cursor: pointer;
       }
-      .success-message {
-        color: #4caf50;
-        margin-left: 10px;
-        opacity: 1;
-        transition: opacity 0.5s;
+
+      .collapse-indicator {
+        margin-right: 10px;
+        transition: transform 0.3s;
       }
-      .fade-out {
-        opacity: 0;
+
+      .collapsed .collapse-indicator {
+        transform: rotate(-90deg);
+      }
+
+      .collapsed .group-content {
+        display: none;
+      }
+
+      @media (max-width: 768px) {
+        .group-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .actions {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .file {
+          flex-direction: column;
+        }
+
+        .file-select {
+          margin-bottom: 10px;
+        }
       }
     </style>
   </head>
   <body>
-    <h1>Duplicate File Manager</h1>
-    <div class="top-actions">
-      <button
-        class="delete-selected"
-        onclick="deleteSelected()"
-        disabled
-        id="deleteSelectedBtn"
-      >
-        Delete Selected
-      </button>
-      <button class="shutdown-btn" onclick="shutdown()">Shutdown Server</button>
+    <div class="header-container">
+      <div class="header-content">
+        <div class="header">
+          <h1>Duplicate File Manager</h1>
+          <div class="controls">
+            <button
+              class="theme-toggle"
+              onclick="toggleTheme()"
+              aria-label="Toggle dark mode"
+            >
+              🌓
+            </button>
+          </div>
+        </div>
+
+        <div class="filters">
+          <div class="filter-group">
+            <label for="pathFilter" class="filter-label">Filter by path</label>
+            <input
+              type="text"
+              id="pathFilter"
+              class="filter-input"
+              placeholder="Enter path to filter..."
+              oninput="applyFilters()"
+            />
+          </div>
+          <div class="filter-group">
+            <label for="sizeFilter" class="filter-label">Filter by size</label>
+            <select
+              id="sizeFilter"
+              onchange="applyFilters()"
+              aria-label="Filter by file size"
+            >
+              <option value="">All Sizes</option>
+              <option value="small">Small (<1MB)</option>
+              <option value="medium">Medium (1-10MB)</option>
+              <option value="large">Large (>10MB)</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="typeFilter" class="filter-label">Filter by type</label>
+            <select
+              id="typeFilter"
+              onchange="applyFilters()"
+              aria-label="Filter by file type"
+            >
+              <option value="">All Types</option>
+              <option value="image">Images</option>
+              <option value="document">Documents</option>
+              <option value="video">Videos</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <button onclick="toggleAllGroups()">Toggle All Groups</button>
+          <button
+            class="delete-selected"
+            onclick="deleteSelected()"
+            disabled
+            id="deleteSelectedBtn"
+          >
+            Delete Selected
+          </button>
+          <button class="shutdown-btn" onclick="shutdown()">
+            Shutdown Server
+          </button>
+        </div>
+      </div>
     </div>
-    <div id="groups"></div>
+
+    <div class="main-content">
+      <div id="groups"></div>
+    </div>
+
+    <div
+      class="preview-modal"
+      id="previewModal"
+      role="dialog"
+      aria-label="File preview"
+    >
+      <button
+        class="close-preview"
+        onclick="closePreview()"
+        aria-label="Close preview"
+      >
+        ×
+      </button>
+      <div class="preview-content" id="previewContent"></div>
+    </div>
 
     <script>
+      // Theme management
+      function toggleTheme() {
+        const theme =
+          document.documentElement.getAttribute("data-theme") === "dark"
+            ? "light"
+            : "dark";
+        document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem("theme", theme);
+      }
+
+      // Initialize theme
+      const savedTheme = localStorage.getItem("theme") || "light";
+      document.documentElement.setAttribute("data-theme", savedTheme);
+
+      let duplicateGroups = [];
+      let allGroupsExpanded = true;
+
+      function toggleAllGroups() {
+        allGroupsExpanded = !allGroupsExpanded;
+        document.querySelectorAll(".group").forEach((group) => {
+          if (allGroupsExpanded) {
+            group.classList.remove("collapsed");
+          } else {
+            group.classList.add("collapsed");
+          }
+        });
+      }
+
+      function toggleGroup(groupIndex) {
+        const group = document.querySelector(
+          `.group[data-group-index="${groupIndex}"]`
+        );
+        group.classList.toggle("collapsed");
+      }
+
+      function getFileType(path) {
+        const ext = path.toLowerCase().split(".").pop();
+        const imageExts = ["jpg", "jpeg", "png", "gif", "bmp", "webp"];
+        const documentExts = ["pdf", "doc", "docx", "txt", "md", "rtf"];
+        const videoExts = ["mp4", "avi", "mov", "wmv", "flv", "mkv"];
+
+        if (imageExts.includes(ext)) return "image";
+        if (documentExts.includes(ext)) return "document";
+        if (videoExts.includes(ext)) return "video";
+        return "other";
+      }
+
+      function formatDate(date) {
+        return new Date(date).toLocaleString();
+      }
+
       async function loadDuplicates() {
         const response = await fetch("/api/duplicates");
-        const groups = await response.json();
-        const container = document.getElementById("groups");
+        duplicateGroups = await response.json();
+        renderGroups();
+      }
 
-        container.innerHTML = groups
+      function applyFilters() {
+        renderGroups();
+      }
+
+      function renderGroups() {
+        const pathFilter = document
+          .getElementById("pathFilter")
+          .value.toLowerCase();
+        const sizeFilter = document.getElementById("sizeFilter").value;
+        const typeFilter = document.getElementById("typeFilter").value;
+
+        const filteredGroups = duplicateGroups.filter((group) => {
+          // Apply size filter
+          const size = group[0].size;
+          if (sizeFilter === "small" && size >= 1024 * 1024) return false;
+          if (
+            sizeFilter === "medium" &&
+            (size < 1024 * 1024 || size > 10 * 1024 * 1024)
+          )
+            return false;
+          if (sizeFilter === "large" && size <= 10 * 1024 * 1024) return false;
+
+          // Apply path and type filters
+          return group.some((file) => {
+            const matchesPath = file.path.toLowerCase().includes(pathFilter);
+            const matchesType =
+              !typeFilter || getFileType(file.path) === typeFilter;
+            return matchesPath && matchesType;
+          });
+        });
+
+        const container = document.getElementById("groups");
+        container.innerHTML = filteredGroups
           .map((group, groupIndex) => {
             const hash = group[0].hash;
-            const size = group[0].size;
             return `
-            <div class="group" data-group-index="${groupIndex}">
-              <div class="group-header">
-                <h3>Group ${groupIndex + 1} (Hash: ${hash.slice(
-              0,
-              8
-            )}...) - Size: ${size} bytes</h3>
-                <label>
-                  <input type="checkbox" 
-                         onchange="toggleGroupSelection(${groupIndex}, this.checked)" 
-                         class="group-checkbox">
-                  Select All
-                </label>
-              </div>
+          <div class="group" data-group-index="${groupIndex}">
+            <div class="group-header" onclick="toggleGroup(${groupIndex})">
+              <span class="collapse-indicator">▼</span>
+              <h3>Group ${groupIndex + 1} - ${group[0].formattedSize} - ${
+              hash ? hash.slice(0, 8) : "calculating..."
+            }</h3>
+              <label>
+                <input type="checkbox" 
+                       onchange="toggleGroupSelection(${groupIndex}, this.checked); event.stopPropagation();" 
+                       class="group-checkbox"
+                       aria-label="Select all files in group ${groupIndex + 1}">
+                Select All
+              </label>
+            </div>
+            <div class="group-content">
               ${group
                 .map(
                   (file, fileIndex) => `
@@ -151,32 +532,46 @@
                     <input type="checkbox" 
                            class="file-checkbox" 
                            data-path="${file.path}"
-                           onchange="updateDeleteButton()">
+                           onchange="updateDeleteButton()"
+                           aria-label="Select ${file.path}">
                   </div>
                   <div class="file-info">
-                    <div>${file.path}</div>
+                    <div class="file-path">${file.path}</div>
+                    <div class="file-meta">
+                      <span>Size: ${file.formattedSize}</span>
+                      <span>Modified: ${formatDate(file.modified)}</span>
+                      <span>Created: ${formatDate(file.created)}</span>
+                    </div>
                   </div>
                   <div class="actions">
                     <div class="rename-container">
                       <input type="text" 
                              placeholder="New name" 
-                             onkeyup="if(event.key==='Enter') renameFile(${groupIndex}, ${fileIndex}, this)">
+                             onkeyup="if(event.key==='Enter') renameFile(${groupIndex}, ${fileIndex}, this)"
+                             aria-label="New name for ${file.path}">
                       <button class="rename-btn" 
                               onclick="renameFile(${groupIndex}, ${fileIndex}, this.previousElementSibling)">
                         Rename
                       </button>
-                      <span class="success-message" style="opacity: 0;">Renamed!</span>
                     </div>
-                    <button class="download" onclick="downloadFile('${file.path}')">Download</button>
+                    <button class="preview-btn" onclick="previewFile('${
+                      file.path
+                    }')" aria-label="Preview ${file.path}">Preview</button>
+                    <button class="download" onclick="downloadFile('${
+                      file.path
+                    }')" aria-label="Download ${file.path}">Download</button>
                   </div>
                 </div>
               `
                 )
                 .join("")}
             </div>
-          `;
+          </div>
+        `;
           })
           .join("");
+
+        updateDeleteButton();
       }
 
       function updateDeleteButton() {
@@ -241,24 +636,44 @@
 
           if (response.ok) {
             const result = await response.json();
-            // Update the path in the UI
             file.querySelector(".file-info").firstElementChild.textContent =
               result.newPath;
             file.querySelector(".file-checkbox").dataset.path = result.newPath;
-
-            // Show success message
-            const successMsg = file.querySelector(".success-message");
-            successMsg.style.opacity = "1";
-            setTimeout(() => {
-              successMsg.style.opacity = "0";
-            }, 2000);
-
-            // Clear input
             input.value = "";
+            loadDuplicates(); // Reload to update all metadata
           }
         } catch (error) {
           alert("Failed to rename file: " + error.message);
         }
+      }
+
+      async function previewFile(path) {
+        const modal = document.getElementById("previewModal");
+        const content = document.getElementById("previewContent");
+        const fileType = getFileType(path);
+
+        modal.style.display = "block";
+        content.innerHTML = "Loading preview...";
+
+        try {
+          if (fileType === "image") {
+            content.innerHTML = `<img src="/api/download/${encodeURIComponent(
+              path
+            )}" class="preview-image" alt="Preview of ${path}">`;
+          } else {
+            const response = await fetch(
+              `/api/download/${encodeURIComponent(path)}`
+            );
+            const text = await response.text();
+            content.innerHTML = `<pre class="preview-text">${text}</pre>`;
+          }
+        } catch (error) {
+          content.innerHTML = "Failed to load preview";
+        }
+      }
+
+      function closePreview() {
+        document.getElementById("previewModal").style.display = "none";
       }
 
       function downloadFile(path) {
@@ -273,13 +688,25 @@
           document.body.innerHTML =
             "<h1>Server has been shut down</h1><p>You can close this window now.</p>";
         } catch (error) {
-          // If we get here, the server is probably already shut down
           document.body.innerHTML =
             "<h1>Server has been shut down</h1><p>You can close this window now.</p>";
         }
       }
 
+      // Initialize
       loadDuplicates();
+
+      // Close preview modal when clicking outside
+      document
+        .getElementById("previewModal")
+        .addEventListener("click", function (e) {
+          if (e.target === this) closePreview();
+        });
+
+      // Handle Escape key to close preview
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closePreview();
+      });
     </script>
   </body>
 </html>
